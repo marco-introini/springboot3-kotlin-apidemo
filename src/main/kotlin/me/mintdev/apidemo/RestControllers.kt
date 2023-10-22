@@ -13,36 +13,35 @@ import org.springframework.web.server.ResponseStatusException
 
 @RestController
 @RequestMapping("api/v1/users")
-class UserController {
-    val users = mutableListOf(User(username = "user",
-        email = "test@test.com",
-        password = "password"))
+class UserController (val repository: UserRepository){
 
     @GetMapping
-    fun users() = users
+    fun users() = repository.findAllByOrderByCreatedAtDesc()
 
     @GetMapping("/{username}")
     fun users(@PathVariable username:String) =
-        users.find { user -> user.username == username } ?: ResponseStatusException(HttpStatus.NOT_FOUND)
+        repository.findByUsername(username).orElseThrow {throw ResponseStatusException(HttpStatus.NOT_FOUND)}
 
     @PostMapping
     fun newUser(@RequestBody user: User): User {
-        users.add(user);
-        return user;
+        repository.save(user)
+        return user
     }
 
     @PutMapping("/{username}")
     fun updateUser(@RequestBody user:User,@PathVariable username:String): User {
-        val existingUser = users.find { it.username == username } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        val existingUser = repository.findByUsername(username).orElseThrow {throw ResponseStatusException(HttpStatus.NOT_FOUND)}
         existingUser.username = user.username
         existingUser.email = user.email
         existingUser.password = user.password
+        repository.save(existingUser)
         return existingUser
     }
 
     @DeleteMapping("/{username}")
     fun deleteUser(@PathVariable username:String) {
-        users.removeIf { user -> user.username == username }
+        val existingUser = repository.findByUsername(username).orElseThrow {throw ResponseStatusException(HttpStatus.NOT_FOUND)}
+        repository.delete(existingUser)
         throw ResponseStatusException(HttpStatus.NO_CONTENT)
     }
 }
